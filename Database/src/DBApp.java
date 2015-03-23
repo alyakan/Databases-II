@@ -91,6 +91,30 @@ public class DBApp implements java.io.Serializable {
 		
 	}
 	
+	public ArrayList<String> htblKeys(Hashtable<String,String> htbl) {
+		int length = htbl.toString().length();
+		String temp = htbl.toString().substring(1, length - 1);
+		String [] tempArray = temp.split(", ");
+		ArrayList<String> keys = new ArrayList<String>();
+		for(int i = 0; i < tempArray.length; i++) {
+			String [] tempArray2 = tempArray[i].split("=");
+			keys.add(tempArray2[0]);
+		}
+		return keys;
+	}
+	
+	public ArrayList<String> htblValues(Hashtable<String,String> htbl) {
+		int length = htbl.toString().length();
+		String temp = htbl.toString().substring(1, length - 1);
+		String [] tempArray = temp.split(", ");
+		ArrayList<String> values = new ArrayList<String>();
+		for(int i = 0; i < tempArray.length; i++) {
+			String [] tempArray2 = tempArray[i].split("=");
+			values.add(tempArray2[1]);
+		}
+		return values;
+	}
+	
 	public void createIndex(String strTableName,
 			String strColName)
 			throws DBAppException{
@@ -119,10 +143,10 @@ public class DBApp implements java.io.Serializable {
 			temproot.insert(htblColNameValue.get(indexedCols.get(key)), "" + strTableName + pCount); // Insert into BTree. Key = Column's value. Value = tableName + pageCount (Reference)
 			String file = strTableName + key + ".class";
 			try {
-				fileOut = new FileOutputStream(file); // Create a page for indices
+				fileOut = new FileOutputStream(file, true); // set output stream to index file
 				out = new ObjectOutputStream(fileOut);
 				String record = htblColNameValue.get(indexedCols.get(key)) + "," + strTableName + pCount;
-				out.writeObject(record);
+				out.writeObject(record); // insert index (key,value) into index file for whenever we want to recreate indices
 			} catch(IOException e) {
 				
 			}
@@ -134,7 +158,22 @@ public class DBApp implements java.io.Serializable {
 	public void deleteFromTable(String strTableName,
 			Hashtable<String,String> htblColNameValue,
 			String strOperator)
-			throws DBEngineException{}
+			throws DBEngineException{
+		ArrayList<String> colNames = htblKeys(htblColNameValue);
+		Table table = tables.get(strTableName);
+		Hashtable<String,BTree> indices = table.getIndices();
+		for(int i = 0; i < colNames.size(); i++) {
+			String Col = colNames.get(i);
+			if(table.getIndexedCols().contains(Col)) {
+				BTree root = indices.get(Col);
+				String ref = (String)root.search(htblColNameValue.get(Col)); // Get record's reference/page
+				
+			} else {
+				
+			}
+		}
+			
+	}
 	
 	public Iterator<?> selectValueFromTable(String strTable,
 			Hashtable<String,String> htblColNameValue,
@@ -165,6 +204,9 @@ public class DBApp implements java.io.Serializable {
 		DBApp a = new DBApp();
 		a.init();
 		System.out.println("lol");
+		System.out.println(balance.toString().substring(1, balance.toString().length()-1));
+		System.out.println(a.htblKeys(balance));
+		System.out.println(a.htblValues(balance));
 		names = balance.keys();
 		String []b = null;
 		Set<String> indexedColNames = balance.keySet();
