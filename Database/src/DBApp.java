@@ -159,20 +159,124 @@ public class DBApp implements java.io.Serializable {
 			Hashtable<String,String> htblColNameValue,
 			String strOperator)
 			throws DBEngineException{
-		ArrayList<String> colNames = htblKeys(htblColNameValue);
+		if(strOperator.toLowerCase().equals("or")) {
+			deleteWhenOr(strTableName, htblColNameValue);
+		} else {
+			deleteWhenAdd(strTableName, htblColNameValue);
+		}
+		
+			
+	}
+	
+	public void deleteWhenAdd(String strTableName,
+			Hashtable<String,String> htblColNameValue) {
+		ArrayList<String> colNames = htblKeys(htblColNameValue); // Column Names of records to be deleted
+		ArrayList<String> colValues = htblValues(htblColNameValue); // Corresponding values of columns
 		Table table = tables.get(strTableName);
-		Hashtable<String,BTree> indices = table.getIndices();
-		for(int i = 0; i < colNames.size(); i++) {
-			String Col = colNames.get(i);
-			if(table.getIndexedCols().contains(Col)) {
-				BTree root = indices.get(Col);
-				String ref = (String)root.search(htblColNameValue.get(Col)); // Get record's reference/page
-				
-			} else {
-				
+		Hashtable<String,BTree> indices = table.getIndices(); // Get the hash table containing the indexed columns and their BTrees
+		ArrayList<String> indexedCols = table.getIndexedCols();
+		String col = "";
+		for(int i = 0; i < colNames.size(); i++) { // Searching if any column is indexed
+			col = colNames.get(i);
+			if(indexedCols.contains(col)) {
+				break;
 			}
 		}
-			
+		if(!col.equals("")) { // If there's an indexed column, then there will be no duplicates
+			BTree root = indices.get(col);
+			String val = htblColNameValue.get(col);
+			String ref = (String)root.search(val);
+			if(!ref.equals(null)) {
+				ArrayList<Hashtable<String,String>> records = table.getHandler().loadRecordsFromPage(ref);
+				for(int i = 0; i < records.size(); i++) {
+					Hashtable<String,String> current = records.get(i); // Current record in page
+					if(current.get(col).equals(val)) { // If the indexed column's value equals the current record's value
+						/* Checking that all the conditions' values are equals to current record's values 
+						 * Either there is a record to delete, otherwise there will be no record at all because 
+						 * one of the columns are indexed (No duplicates)*/
+						for(int j = 0; j < colNames.size(); j++) { 
+							if(!current.get(colNames.get(j)).equals(colValues.get(j))) {
+								return; // Return if one of the conditions is not true
+							}
+						}
+						records.remove(i);
+						root.delete(col);
+						break;
+					}
+				}
+				table.getHandler().deleteFile(ref); // Delete the file where the record existed
+				table.getHandler().writeRecordsToPage(ref, records); // Recreate the file without the deleted record
+			} else {
+				return; // The indexed value was not found, therefore there is no record
+			}
+		} else { // No indexed columns
+			int pCount = table.getHandler().getpCount();
+			for(int i = 0; i <= pCount; i++) {
+				String ref = strTableName + i + ".class";
+				ArrayList<Hashtable<String,String>> records = table.getHandler().loadRecordsFromPage(ref);
+				for(int j = 0; j < records.size(); j++) { // Loop through each single page
+					Hashtable<String,String> current = records.get(j);
+					boolean delete = true;
+					/* Checks on each record whether it meets all the conditions, if not get next record and keep checking*/
+					for(int k = 0; k < colNames.size(); k++) { 
+						if(!(current.get(colNames.get(k)).equals(colValues.get(k)))) { // One of the conditions are not true
+							delete = false;
+							break;
+						}
+					}
+					if(delete) { // All conditions are true
+						records.remove(j);
+					}
+				}
+				table.getHandler().deleteFile(ref); // Delete the file where the record existed
+				table.getHandler().writeRecordsToPage(ref, records); // Recreate the file without the deleted record
+			}
+		}
+		
+	}
+	
+	public void deleteWhenOr(String strTableName,
+			Hashtable<String,String> htblColNameValue) {
+		ArrayList<String> colNames = htblKeys(htblColNameValue); // Column Names of records to be deleted
+		ArrayList<String> colValues = htblValues(htblColNameValue); // Corresponding values of columns
+		Table table = tables.get(strTableName);
+		Hashtable<String,BTree> indices = table.getIndices(); // Get the hash table containing the indexed columns and their BTrees
+		for(int i = 0; i < colNames.size(); i++) {
+			String col = colNames.get(i);
+			String val = colValues.get(i);
+			if(table.getIndexedCols().contains(col)) { // Check if a column is indexed
+				BTree root = indices.get(col);
+				String ref = (String)root.search(htblColNameValue.get(col)); // Get record's reference/page
+				if(!ref.equals(null)){ // If the record exists
+					ArrayList<Hashtable<String,String>> records = table.getHandler().loadRecordsFromPage(ref);
+					for(int j = 0; j < records.size(); j++) {
+						Hashtable<String,String> current = records.get(j);
+						if(current.get(col).equals(val)) { // Remove record from the records array list
+							records.remove(j);
+							root.delete(col);
+							break;
+						}
+					}
+					table.getHandler().deleteFile(ref); // Delete the file where the record existed
+					table.getHandler().writeRecordsToPage(ref, records); // Recreate the file without the deleted record
+				} 
+			} else { // If the columns is not indexed
+				int pCount = table.getHandler().getpCount();
+				for(int j = 0; j <= pCount; j++) { // Loop through all pages
+					String ref = strTableName + j + ".class";
+					ArrayList<Hashtable<String,String>> records = table.getHandler().loadRecordsFromPage(ref);
+					for(int k = 0; k < records.size(); k++) { // Loop through each single page
+						Hashtable<String,String> current = records.get(k);
+						if(current.get(col).equals(val)) { // Remove record from the records array list
+							records.remove(j);
+							break; // HANDLE DUPLICATES?
+						}
+					}
+					table.getHandler().deleteFile(ref); // Delete the file where the record existed
+					table.getHandler().writeRecordsToPage(ref, records); // Recreate the file without the deleted record
+				}
+			}
+		}
 	}
 	
 	public Iterator<?> selectValueFromTable(String strTable,
@@ -210,12 +314,20 @@ public class DBApp implements java.io.Serializable {
 		names = balance.keys();
 		String []b = null;
 		Set<String> indexedColNames = balance.keySet();
+		ArrayList<String> records = new ArrayList<String>();
+		records.add("Lol");
+		records.add("Lol1");
+		records.add("Lol2");
+		records.add("Lol3");
+		records.remove("Lol2");
+		System.out.println(records.toString());
+		System.out.println("" + records.contains("Lol2") + records.contains("Lol3"));
 		
-		  System.out.println(balance.keySet().iterator().next());
+		System.out.println(balance.keySet().iterator().next());
 
-		  System.out.println(balance.keySet().remove(balance.keySet().iterator().next()));
+		System.out.println(balance.keySet().remove(balance.keySet().iterator().next()));
 		  
-		  System.out.println(balance.keySet().iterator().next());
+		System.out.println(balance.keySet().iterator().next());
 	      
 	}
 

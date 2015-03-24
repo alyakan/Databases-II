@@ -25,8 +25,7 @@ public class DBHandler {
 	
 	public void createPage(String fileName) {
 		try {
-			//writer = new FileWriter(fileName);
-			fileOut = new FileOutputStream(fileName);
+			fileOut = new FileOutputStream(fileName, true);
 			out  = new ObjectOutputStream(fileOut);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -36,9 +35,6 @@ public class DBHandler {
 	private void appendRecord(Hashtable <String,String> htblColNameValue) {
 		try {
 			out.writeObject(htblColNameValue);
-			//out.close();
-			//fileOut.close();
-			//writer.append(record + "\n");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -52,6 +48,11 @@ public class DBHandler {
 			rCount = 0; // Reset row count
 			pCount ++;
 			String fileName = (tableName + pCount + ".class");
+			try { // Making sure that the output stream is using the latest created page in the database
+				fileOut = new FileOutputStream(fileName, true);
+				out  = new ObjectOutputStream(fileOut);
+			} catch (IOException io) {
+			}
 			createPage(fileName);
 		}
 		appendRecord(htblColNameValue);
@@ -80,6 +81,25 @@ public class DBHandler {
 		}
 		return result;
 	}
+	
+	/* This method deletes a file using the variable ref (File's name) */
+	public void deleteFile(String ref) {
+		try {
+			File file = new File(ref+".class");
+			if (file.delete())
+				System.out.println(ref+".class is deleted");
+		} catch (Exception e) {
+			
+		}
+	}
+	
+	public void writeRecordsToPage(String ref, ArrayList<Hashtable<String,String>> records) {
+		String fileName = (ref + ".class");
+		createPage(fileName);
+		for(int i = 0; i < records.size(); i++) {
+			appendRecord(records.get(i));
+		}
+	}
 
 	public String getTableName() {
 		return tableName;
@@ -95,6 +115,14 @@ public class DBHandler {
 
 	public void setrCount(int rCount) {
 		this.rCount = rCount;
+	}
+	
+	public int getpCount() {
+		return pCount;
+	}
+
+	public void setpCount(int pCount) {
+		this.pCount = pCount;
 	}
 
 	public int getLimit() {
