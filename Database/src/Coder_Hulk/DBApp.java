@@ -123,14 +123,10 @@ public class DBApp implements java.io.Serializable {
 			throws DBAppException{
 		if(tables.containsKey(strTableName)) {
 			BTree root = new BTree();
-			tables.get(strTableName).addToIndices(strColName,root);
-			tables.get(strTableName).getIndexedCols().add(strColName);
-			String file = strTableName + strColName + ".class";
-			try {
-				fileOut = new FileOutputStream(file); // Create a page for indices
-			} catch(IOException e) {
-				
-			}
+			Table table = tables.get(strTableName);
+			table.addToIndices(strColName,root);
+			table.getIndexedCols().add(strColName);
+			table.createIndexToSavedIndices(strColName);
 		} else {
 			throw new DBAppException("No Table Exists With That Name");
 		}
@@ -141,18 +137,18 @@ public class DBApp implements java.io.Serializable {
 			Hashtable<String,String> htblColNameValue)
 			throws DBAppException{
 		Table temp = tables.get(strTableName);
-		int pCount = temp.getHandler().Insert(htblColNameValue);
+		int pCount = temp.getPages().addRecord(htblColNameValue); // Inserting a record into table's pages
 		Hashtable<String,BTree> indexedCols = temp.getIndices(); // Getting Indexed columns with their BTrees
 		for(int i = 0; i < temp.getIndexedCols().size(); i++) { // For loop to insert values of indexed columns into BTrees
 			String key = temp.getIndexedCols().get(i); // One of the indexed columns' names
 			BTree<String, String> temproot = indexedCols.get(key); // Acquiring the BTree for the column
-			temproot.insert((String)htblColNameValue.get(key), "" + strTableName + pCount); // Insert into BTree. Key = Column's value. Value = tableName + pageCount (Reference)
+			//temproot.insert((String)htblColNameValue.get(key), "" + strTableName + pCount); // Insert into BTree. Key = Column's value. Value = pageCount (Reference)
 			String file = strTableName + key + ".class";
 			try {
 				fileOut = new FileOutputStream(file, true); // set output stream to index file
 				out = new ObjectOutputStream(fileOut);
-				String record = htblColNameValue.get(key) + "," + strTableName + pCount;
-				out.writeObject(record); // insert index (key,value) into index file for whenever we want to recreate indices
+				//String record = htblColNameValue.get(key) + "," + strTableName + pCount;
+				//out.writeObject(record); // insert index (key,value) into index file for whenever we want to recreate indices
 			} catch(IOException e) {
 				
 			}
@@ -218,7 +214,7 @@ public class DBApp implements java.io.Serializable {
 		} else { // No indexed columns
 			int pCount = table.getHandler().getpCount();
 			for(int i = 0; i <= pCount; i++) {
-				String ref = strTableName + i + ".class";
+				String ref = strTableName + i;
 				ArrayList<Hashtable<String,String>> records = table.getHandler().loadRecordsFromPage(ref);
 				for(int j = 0; j < records.size(); j++) { // Loop through each single page
 					Hashtable<String,String> current = records.get(j);
@@ -269,7 +265,7 @@ public class DBApp implements java.io.Serializable {
 			} else { // If the columns is not indexed
 				int pCount = table.getHandler().getpCount();
 				for(int j = 0; j <= pCount; j++) { // Loop through all pages
-					String ref = strTableName + j + ".class";
+					String ref = strTableName + j;
 					ArrayList<Hashtable<String,String>> records = table.getHandler().loadRecordsFromPage(ref);
 					for(int k = 0; k < records.size(); k++) { // Loop through each single page
 						Hashtable<String,String> current = records.get(k);

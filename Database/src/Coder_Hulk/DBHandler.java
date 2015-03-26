@@ -10,10 +10,16 @@ public class DBHandler {
 	private int rCount; // Row Count
 	private int limit; // Row Limit
 	//private FileWriter writer;
-	private FileOutputStream fileOut;
-	private ObjectOutputStream out;
-	private FileInputStream fileIn;
-	private ObjectInputStream in;
+	private FileOutputStream fileOut; // For pages
+	private ObjectOutputStream out; // For pages
+	private FileInputStream fileIn; // For pages
+	private ObjectInputStream in; // For pages
+	
+	private ArrayList<ArrayList<Hashtable<String,String>>> listOfPages;
+	private FileOutputStream listFileOut; // For list
+	private ObjectOutputStream listOut; // For list
+	private FileInputStream listFileIn; // For list
+	private ObjectInputStream listIn; // For list
 	
 	public DBHandler(String tableName) {
 		this.setTableName(tableName);
@@ -21,13 +27,26 @@ public class DBHandler {
 		setrCount(0);
 		setLimit(200); // For now
 		String fileName = (tableName + pCount + ".class");
-		createPage(fileName);
+		listOfPages = new ArrayList<ArrayList<Hashtable<String,String>>>();
+		listOfPages.add(new ArrayList<Hashtable<String,String>>());
+		String listOfPagesFile = tableName + "arrayList.class";
+		try {
+			listFileOut = new FileOutputStream(listOfPagesFile, true); // Creating the listOfPages files
+			fileOut = new FileOutputStream(fileName, true); // Creating a new page
+			out  = new ObjectOutputStream(fileOut);
+			fileIn = new FileInputStream(fileName);
+			in = new ObjectInputStream(fileIn);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		//createPage(fileName);
 	}
 	
 	public void createPage(String fileName) {
 		try {
 			fileOut = new FileOutputStream(fileName, true);
 			out  = new ObjectOutputStream(fileOut);
+			listOfPages.add(new ArrayList<Hashtable<String,String>>());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -56,41 +75,44 @@ public class DBHandler {
 			}
 			createPage(fileName);
 		}
+		listOfPages.get(pCount).add(htblColNameValue); // Adding records to listOfPages TODO Update the file containing the array list
 		appendRecord(htblColNameValue);
 		return pCount;
 	}
 	/* This method takes a table name (page of records) and loads that page into an ArrayList of Hashtables (records) 
 	 * by de-serializing the page */
-	public ArrayList<Hashtable<String,String>> loadRecordsFromPage(String ref) {
+	public ArrayList<Hashtable<String,String>> loadRecordsFromPage(String ref) { // TODO change ref from calling method to int index
 		ArrayList<Hashtable<String,String>> result = new ArrayList<Hashtable<String,String>>();
-		try {
-			fileIn = new FileInputStream(ref+".class");
-			in = new ObjectInputStream(fileIn);
-			while(true) {
-				result.add((Hashtable<String, String>) in.readObject());
-			}
-		} catch(IOException e) {
-			
-		} catch(ClassNotFoundException e) {
-			
-		} finally {
-			try {
-				in.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
+		int index = Integer.parseInt(ref);
+		result = listOfPages.get(index);
 		return result;
 	}
 	
 	/* This method deletes a file using the variable ref (File's name) */
 	public void deleteFile(String ref) {
 		try {
-			File file = new File(ref+".class");
+			if(!ref.contains(".class")) {
+				ref += ".class";
+			}
+			File file = new File(ref);
 			if (file.delete())
-				System.out.println(ref+".class is deleted");
+				System.out.println(ref);
 		} catch (Exception e) {
 			
+		}
+	}
+	
+	/* Deletes a record from listOfPages and updates required pages */
+	public void deleteRecordFromList(String ref, Hashtable<String,String> record) {
+		String recordString = record.toString();
+		int i = Integer.parseInt(ref);
+		ArrayList<Hashtable<String,String>> page = listOfPages.get(i);
+		for(int j = 0; j < page.size(); j++) {
+			String tempRecord = page.get(j).toString();
+			if(tempRecord.equals(recordString)) {
+				page.remove(j); // TODO UPDATE page of listOfPages and normal page
+				break;
+			}
 		}
 	}
 	
@@ -135,11 +157,15 @@ public class DBHandler {
 	}
 	
 	public static void main(String[]args) {
-		Record r = new Record ("Lol");
-		DBHandler handler = new DBHandler ("table");
-		//handler.Insert(r);
-		//handler.Insert(r);
-		//handler.Insert(r);
+		
+	}
+	
+	public ArrayList<ArrayList<Hashtable<String,String>>> getListOfPages() {
+		return listOfPages;
+	}
+
+	public void setListOfPages(ArrayList<ArrayList<Hashtable<String,String>>> listOfPages) {
+		this.listOfPages = listOfPages;
 	}
 
 }
