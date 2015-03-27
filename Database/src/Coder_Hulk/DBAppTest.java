@@ -11,16 +11,18 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.concurrent.TimeUnit;
 
 public class DBAppTest {
 	DBApp test;
-	String tableName;
+	String strTableName;
 	Hashtable<String,String> htblColNameType;
 	Hashtable<String,String> htblColNameRefs;
 	String key;
+	Hashtable<String,String> htblColNameValue;
 	public DBAppTest() {
 		test = new DBApp();
-		tableName = "Employee";
+		strTableName = "Employee";
 		htblColNameType = new Hashtable<String,String>();
 		htblColNameType.put("ID", "Java.Integer");
 		htblColNameType.put("Name", "Java.String");
@@ -30,12 +32,17 @@ public class DBAppTest {
 		htblColNameRefs = new Hashtable<String,String>();
 		htblColNameRefs.put("Dept", "Department.ID");
 		key = "ID";
+		htblColNameValue = new Hashtable<String,String>();
+		htblColNameValue.put("ID", "3");
+		htblColNameValue.put("Name", "Rana");
+		htblColNameValue.put("Age", "20");
+		htblColNameValue.put("Dept", "CS");
 	}
 	
 	/* Create Table WORKS TODO Assertion !!!*/
 	public void testCreateTable() throws DBAppException{
 		
-		test.createTable(tableName, htblColNameType, htblColNameRefs, key);
+		test.createTable(strTableName, htblColNameType, htblColNameRefs, key);
 		try {
 			test.read = new BufferedReader(new FileReader ("metadata.csv"));
 			String line = "";
@@ -51,19 +58,52 @@ public class DBAppTest {
 	}
 	
 	/* Create Index WORKS !!*/
-	public void testCreateIndex() throws DBAppException {
+	public void testCreateIndex() throws DBAppException, IOException {
 		String colName = "Name";
-		test.createTable(tableName, htblColNameType, htblColNameRefs, key);
-		test.createIndex(tableName, colName);
-		File file = new File(tableName + colName + ".class");
-		if(file.exists() && test.tables.get(tableName).getIndexedCols().contains(colName) 
-				&& test.tables.get(tableName).getIndices().containsKey(colName)) {
+		test.createTable(strTableName, htblColNameType, htblColNameRefs, key);
+		test.createIndex(strTableName, colName);
+		File file = new File(strTableName + colName + ".class");
+		if(file.exists() && test.tables.get(strTableName).getIndexedCols().contains(colName) 
+				&& test.tables.get(strTableName).getIndices().containsKey(colName)) {
 			System.out.println("Create Index works");
 		}
 		
 	}
 	
-	public static void main(String[]args) {
+	public void testInsertIntoTable(String strTableName,
+			Hashtable<String,String> htblColNameValue) throws DBAppException, IOException, ClassNotFoundException {
+		test.insertIntoTable(strTableName, htblColNameValue);
+		test.insertIntoTable(strTableName, htblColNameValue);
+		System.out.println(test.tables.get(strTableName).getPages().getpagesList().get(0).toString());
+		test.tables.get(strTableName).savePages();
+		Pages p = test.tables.get(strTableName).loadPages();
+		System.out.println(p.getpagesList().get(0).toString());
+		
+		test.tables.get(strTableName).saveIndices();
+		Hashtable<String, ArrayList<String>> t = test.tables.get(strTableName).loadIndices();
+		System.out.println(t.get("ID").toString());
+	
+		
+	}
+	
+	public void testDeleteFromTable(String strTableName,
+			Hashtable<String,String> htblColNameValue,
+			String strOperator)
+			throws DBEngineException, IOException, ClassNotFoundException{
+		
+		test.deleteFromTable(strTableName, htblColNameValue, strOperator);
+
+		//test.tables.get(strTableName).updatePages();
+		Pages p = test.tables.get(strTableName).loadPages();
+		System.out.println(p.getpagesList().get(0).toString());
+		Hashtable<String, ArrayList<String>> t = test.tables.get(strTableName).loadIndices();
+		System.out.println(t.get("ID").toString());
+
+
+		
+	}
+	
+	public static void main(String[]args) throws FileNotFoundException, IOException, ClassNotFoundException {
 		DBAppTest test = new DBAppTest();
 		test.test.init();
 		try {
@@ -72,70 +112,59 @@ public class DBAppTest {
 			e.printStackTrace();
 		}
 
-		try {
-			test.testCreateIndex();
-		} catch (DBAppException e) {
-			e.printStackTrace();
-		}
-		ArrayList<Hashtable<String,String>> records = new ArrayList<Hashtable<String,String>>();
-		Hashtable<String,String> htblColNameValue = new Hashtable<String,String>();
-		htblColNameValue.put("ID","2");
-		htblColNameValue.put("Name","Aly");
-		htblColNameValue.put("Age","2");
-		htblColNameValue.put("Salary","2");
-		htblColNameValue.put("Dept","2");
-		records.add(htblColNameValue);
-		
-		try {
-			test.test.insertIntoTable("Employee", htblColNameValue);
-		} catch (DBAppException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		htblColNameValue = new Hashtable<String,String>();
-		htblColNameValue.put("ID","3");
-		htblColNameValue.put("Name","Rana");
-		htblColNameValue.put("Age","2");
-		htblColNameValue.put("Salary","2");
-		htblColNameValue.put("Dept","2");
-		try {
-			test.test.insertIntoTable("Employee", htblColNameValue);
-		} catch (DBAppException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		
-		records.add(htblColNameValue);
-		System.out.println(records.toString());
-		test.test.tables.get("Employee").getHandler().getListOfPages().add(records);
-		try {
-			FileOutputStream fileOut = new FileOutputStream("test.class");
-			ObjectOutputStream out = new ObjectOutputStream(fileOut);
-			out.writeObject(records);
-			out.reset();
-			out.close();
-		} catch(IOException e) {
-			
-		}
-		try {
-			FileInputStream fileIn = new FileInputStream("test.class");
-			ObjectInputStream in = new ObjectInputStream(fileIn);
-			records = (ArrayList<Hashtable<String,String>>)in.readObject();
-			System.out.println(records.toString());
-			in.close();
-		} catch(IOException | ClassNotFoundException e) {
-			e.printStackTrace();
-		}
-		
 //		try {
-//			Hashtable<String,String> delete = new Hashtable<String,String>();
-//			delete.put("Name","Aly");
-//			test.test.deleteFromTable("Employee", delete, "OR");
-//		} catch (DBEngineException e) {
-//			// TODO Auto-generated catch block
+//			//test.testCreateIndex();
+//		} //catch (DBAppException e) {
 //			e.printStackTrace();
 //		}
+		
+		try {
+			test.testInsertIntoTable(test.strTableName, test.htblColNameValue);
+			//System.out.println(test.test.tables.get(test.strTableName).getHandler().loadRecordsFromPage2("Employee0").toString());
+		} catch (DBAppException e) {
+			e.printStackTrace();
+		}
+		
+		try {
+			Hashtable<String,String> htblColNameDelete = new Hashtable<String,String>();
+			htblColNameDelete.put("ID", "3");
+			//htblColNameDelete.put("Name", "Aly");
+			htblColNameDelete.put("Dept", "CS");
+
+			//test.test.tables.get("Employee").updatePages();
+		    test.testDeleteFromTable(test.strTableName, htblColNameDelete, "OR");
+		   
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+
+//        ArrayList<ArrayList<Hashtable<String,String>>> listOfPages = new ArrayList<ArrayList<Hashtable<String,String>>>();
+//		ArrayList<Hashtable<String,String>> A0 = new ArrayList<Hashtable<String,String>>();
+//		Hashtable<String, String> htblColNameValue1 = new Hashtable<String,String>();
+//		htblColNameValue1.put("ID", "3");
+//		htblColNameValue1.put("Name", "Rana");
+//		htblColNameValue1.put("Age", "20");
+//		htblColNameValue1.put("Dept", "CS");
+//		A0.add(htblColNameValue1);
+//		A0.add(htblColNameValue1);
+//		listOfPages.add(A0);
+//
+//		//System.out.println(listOfPages);
+//
+//        ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(new File("t.class")));
+//        oos.writeObject(listOfPages);
+//        oos.close();
+//
+//
+//        ObjectInputStream ois = new ObjectInputStream(new FileInputStream(new File("t.class")));
+//        ArrayList<ArrayList<Hashtable<String,String>>> t = (ArrayList<ArrayList<Hashtable<String,String>>>)ois.readObject();
+//        ois.close();
+//
+//        System.out.println(t.get(0).get(0));
+
+		
 		
 	}
 }

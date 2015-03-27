@@ -1,0 +1,30 @@
+Table Name, Column Name, Column Type, Key, Indexed, References
+Employee, Name, Java.String, False ,False, null
+Employee, ID, Java.Integer, True, True, null
+Employee, Dept, Java.Integer, False ,False, Department.ID
+Employee, Salary, Java.Double, False ,False, null
+Employee, Age, Java.Integer, False ,False, null
+Table Name, Column Name, Column Type, Key, Indexed, References
+Employee, Name, Java.String, False ,False, null
+Employee, ID, Java.Integer, True, True, null
+Employee, Dept, Java.Integer, False ,False, Department.ID
+Employee, Salary, Java.Double, False ,False, null
+Employee, Age, Java.Integer, False ,False, null
+Table Name, Column Name, Column Type, Key, Indexed, References
+Employee, Name, Java.String, False ,False, null
+Employee, ID, Java.Integer, True, True, null
+Employee, Dept, Java.Integer, False ,False, Department.ID
+Employee, Salary, Java.Double, False ,False, null
+Employee, Age, Java.Integer, False ,False, null
+Table Name, Column Name, Column Type, Key, Indexed, References
+Employee, Name, Java.String, False ,False, null
+Employee, ID, Java.Integer, True, True, null
+Employee, Dept, Java.Integer, False ,False, Department.ID
+Employee, Salary, Java.Double, False ,False, null
+Employee, Age, Java.Integer, False ,False, null
+Table Name, Column Name, Column Type, Key, Indexed, References
+Employee, Name, Java.String, False ,False, null
+Employee, ID, Java.Integer, True, True, null
+Employee, Dept, Java.Integer, False ,False, Department.ID
+Employee, Salary, Java.Double, False ,False, null
+Employee, Age, Java.Integer, False ,False, null

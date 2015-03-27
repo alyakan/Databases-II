@@ -14,6 +14,8 @@ public class Pages implements Serializable {
 		this.tableName = tableName;
 		pCount = 0;
 		pagesList = new ArrayList<ArrayList<Hashtable<String,String>>>();
+		addNewPage();
+		pCount --;
 	}
 	
 	public void addNewPage() {
